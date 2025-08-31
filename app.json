@@ -37,6 +37,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "permissions": {
+      "location": {
+        "foreground": {
+          "description": "This app requires precise location to function."
+        }
+      }
     }
   }
 }
+

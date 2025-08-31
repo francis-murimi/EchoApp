@@ -1,75 +1,170 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, StyleSheet, Alert } from 'react-native';
+import {
+  Provider as PaperProvider,
+  MD3LightTheme,
+  Text,
+  TextInput,
+  Button,
+} from 'react-native-paper';
+import * as Location from 'expo-location';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+// Custom Light Theme (White-based)
+const lightTheme = {
+  ...MD3LightTheme,
+  colors: {
+    ...MD3LightTheme.colors,
+    primary: '#6a1b9a', // Purple
+    secondary: '#f50057', // Pink accent
+    background: '#ffffff', // Pure white background
+    surface: '#ffffff', // White surface
+    text: '#212121', // Dark text for contrast
+  },
+};
 
-export default function HomeScreen() {
+type EchoFormProps = {
+  locationEnabled: boolean;
+  location: Location.LocationObject | null;
+};
+
+function EchoForm({ locationEnabled, location }: EchoFormProps) {
+  const [input, setInput] = useState('');
+  const [echo, setEcho] = useState('');
+
+  if (!locationEnabled) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text variant="headlineLarge" style={styles.heading}>
+          Expo Echo App
+        </Text>
+        <Text variant="bodyLarge" style={styles.errorText}>
+          Please enable precise location to use this app
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      <Text variant="headlineLarge" style={styles.heading}>
+        Expo Echo App
+      </Text>
+
+      {/* Display GPS Coordinates */}
+      <Text variant="bodyLarge" style={styles.locationText}>
+        Latitude: {location?.coords.latitude.toFixed(6) || 'N/A'}
+      </Text>
+      <Text variant="bodyLarge" style={styles.locationText}>
+        Longitude: {location?.coords.longitude.toFixed(6) || 'N/A'}
+      </Text>
+
+      <TextInput
+        mode="outlined"
+        label="Type something"
+        value={input}
+        onChangeText={setInput}
+        style={styles.input}
+      />
+
+      <Button mode="contained" onPress={() => setEcho(input)} style={styles.button}>
+        Echo
+      </Button>
+
+      {echo ? (
+        <Text variant="bodyLarge" style={styles.echoText}>
+          You wrote: {echo}
+        </Text>
+      ) : null}
+    </SafeAreaView>
+  );
+}
+
+export default function App() {
+  const [locationEnabled, setLocationEnabled] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // Request foreground location permission
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        
+        if (status !== 'granted') {
+          Alert.alert(
+            'Permission Denied',
+            'Precise location is required to use this app',
+            [{ text: 'OK' }]
+          );
+          setLocationEnabled(false);
+          return;
+        }
+
+        // Get precise location
+        let locationData = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Highest,
+        });
+
+        if (locationData) {
+          setLocation(locationData);
+          setLocationEnabled(true);
+        } else {
+          Alert.alert(
+            'Location Error',
+            'Unable to get precise location. Please ensure location services are enabled.',
+            [{ text: 'OK' }]
+          );
+          setLocationEnabled(false);
+        }
+      } catch (error) {
+        Alert.alert(
+          'Error',
+          'An error occurred while checking location services',
+          [{ text: 'OK' }]
+        );
+        setLocationEnabled(false);
+      }
+    })();
+  }, []);
+
+  return (
+    <PaperProvider theme={lightTheme}>
+      <EchoForm locationEnabled={locationEnabled} location={location} />
+    </PaperProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#ffffff', // Ensure white background
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  heading: {
+    textAlign: 'center',
+    marginBottom: 20,
+    fontWeight: 'bold',
+    color: '#212121',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  input: {
+    marginBottom: 15,
+  },
+  button: {
+    marginTop: 5,
+  },
+  echoText: {
+    marginTop: 20,
+    textAlign: 'center',
+    color: '#212121',
+  },
+  errorText: {
+    textAlign: 'center',
+    color: '#ff0000',
+    marginTop: 10,
+  },
+  locationText: {
+    textAlign: 'center',
+    marginBottom: 10,
+    color: '#212121',
   },
 });
