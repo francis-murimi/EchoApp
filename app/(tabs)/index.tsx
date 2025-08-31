@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, StyleSheet, Alert, Dimensions } from 'react-native';
+import { SafeAreaView, StyleSheet, Alert, Dimensions, View, Linking } from 'react-native';
 import {
   Provider as PaperProvider,
   MD3LightTheme,
@@ -8,7 +8,7 @@ import {
   Button,
 } from 'react-native-paper';
 import * as Location from 'expo-location';
-import MapView, { Marker, Region } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 
 // Custom Light Theme (White-based)
 const lightTheme = {
@@ -31,19 +31,41 @@ type EchoFormProps = {
 function EchoForm({ locationEnabled, location }: EchoFormProps) {
   const [input, setInput] = useState('');
   const [echo, setEcho] = useState('');
-  const [mapRegion, setMapRegion] = useState<Region | null>(null);
+  const [mapHtml, setMapHtml] = useState('');
 
-  // Update map region when location changes
+  // Generate Google Maps iframe HTML when location changes
   useEffect(() => {
-    if (location) {
-      setMapRegion({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.005, // Smaller delta for more zoomed-in view
-        longitudeDelta: 0.005,
-      });
+    if (location && location.coords) {
+      const { latitude, longitude } = location.coords;
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body, html { margin: 0; padding: 0; height: 100%; }
+              iframe { width: 100%; height: 100%; border: none; }
+            </style>
+          </head>
+          <body>
+            <iframe
+              src="https://www.google.com/maps/embed/v1/view?key=YOUR_API_KEY&center=${latitude},${longitude}&zoom=18&maptype=roadmap"
+              allowfullscreen>
+            </iframe>
+          </body>
+        </html>
+      `;
+      setMapHtml(html);
     }
   }, [location]);
+
+  const openInMapsApp = () => {
+    if (location) {
+      const { latitude, longitude } = location.coords;
+      const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+      Linking.openURL(url).catch(err => console.error('Error opening maps:', err));
+    }
+  };
 
   if (!locationEnabled) {
     return (
@@ -75,35 +97,33 @@ function EchoForm({ locationEnabled, location }: EchoFormProps) {
         Accuracy: ±{location?.coords.accuracy?.toFixed(0) || 'N/A'}m
       </Text>
 
-      {/* Map View */}
-      {mapRegion && (
-        <MapView
-          style={styles.map}
-          region={mapRegion}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
-          showsCompass={true}
-          showsScale={true}
-          mapType="standard"
-          onRegionChangeComplete={(region) => setMapRegion(region)}
-          followsUserLocation={false}
-          zoomEnabled={true}
-          scrollEnabled={true}
-          pitchEnabled={true}
-          rotateEnabled={true}
-        >
-          {location && (
-            <Marker
-              coordinate={{
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-              }}
-              title="Your Current Location"
-              description={`Accurate to ±${location.coords.accuracy?.toFixed(0) || 'N/A'}m`}
-              pinColor="#6a1b9a"
-            />
-          )}
-        </MapView>
+      {/* Google Maps via WebView */}
+      {mapHtml ? (
+        <View style={styles.mapContainer}>
+          <WebView
+            originWhitelist={['*']}
+            source={{ html: mapHtml }}
+            style={styles.map}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+            scalesPageToFit={true}
+          />
+          <View style={styles.mapOverlay}>
+            <Button 
+              mode="contained" 
+              onPress={openInMapsApp}
+              style={styles.openMapsButton}
+              icon="map"
+            >
+              Open in Maps App
+            </Button>
+          </View>
+        </View>
+      ) : (
+        <View style={[styles.mapPlaceholder, styles.mapContainer]}>
+          <Text>Loading map...</Text>
+        </View>
       )}
 
       <TextInput
@@ -180,8 +200,7 @@ export default function App() {
           setLocation(locationData);
           setLocationEnabled(true);
           
-          // Optional: Set up location watching for real-time updates
-          // This will continuously update the location
+          // Set up location watching for real-time updates
           Location.watchPositionAsync(
             {
               accuracy: Location.Accuracy.High,
@@ -303,19 +322,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#757575',
   },
-  map: {
-    width: width - 40, // Full width minus padding
-    height: Math.min(300, height * 0.4), // Responsive height, max 300px
+  mapContainer: {
+    height: Math.min(300, height * 0.4),
     marginBottom: 20,
     borderRadius: 12,
     overflow: 'hidden',
-    elevation: 3, // Android shadow
-    shadowColor: '#000', // iOS shadow
+    elevation: 3,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  map: {
+    flex: 1,
+  },
+  mapPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  mapOverlay: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+  },
+  openMapsButton: {
+    borderRadius: 20,
   },
 });
