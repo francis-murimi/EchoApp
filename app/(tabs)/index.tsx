@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, StyleSheet, Alert } from 'react-native';
+import { SafeAreaView, StyleSheet, Alert, Dimensions } from 'react-native';
 import {
   Provider as PaperProvider,
   MD3LightTheme,
@@ -8,6 +8,7 @@ import {
   Button,
 } from 'react-native-paper';
 import * as Location from 'expo-location';
+import MapView, { Marker, Region } from 'react-native-maps';
 
 // Custom Light Theme (White-based)
 const lightTheme = {
@@ -30,6 +31,19 @@ type EchoFormProps = {
 function EchoForm({ locationEnabled, location }: EchoFormProps) {
   const [input, setInput] = useState('');
   const [echo, setEcho] = useState('');
+  const [mapRegion, setMapRegion] = useState<Region | null>(null);
+
+  // Update map region when location changes
+  useEffect(() => {
+    if (location) {
+      setMapRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.005, // Smaller delta for more zoomed-in view
+        longitudeDelta: 0.005,
+      });
+    }
+  }, [location]);
 
   if (!locationEnabled) {
     return (
@@ -51,28 +65,69 @@ function EchoForm({ locationEnabled, location }: EchoFormProps) {
       </Text>
 
       {/* Display GPS Coordinates */}
-      <Text variant="bodyLarge" style={styles.locationText}>
-        Latitude: {location?.coords.latitude.toFixed(6) || 'N/A'}
+      <Text variant="bodyMedium" style={styles.locationText}>
+        📍 Latitude: {location?.coords.latitude.toFixed(6) || 'Loading...'}
       </Text>
-      <Text variant="bodyLarge" style={styles.locationText}>
-        Longitude: {location?.coords.longitude.toFixed(6) || 'N/A'}
+      <Text variant="bodyMedium" style={styles.locationText}>
+        📍 Longitude: {location?.coords.longitude.toFixed(6) || 'Loading...'}
       </Text>
+      <Text variant="bodySmall" style={styles.accuracyText}>
+        Accuracy: ±{location?.coords.accuracy?.toFixed(0) || 'N/A'}m
+      </Text>
+
+      {/* Map View */}
+      {mapRegion && (
+        <MapView
+          style={styles.map}
+          region={mapRegion}
+          showsUserLocation={true}
+          showsMyLocationButton={true}
+          showsCompass={true}
+          showsScale={true}
+          mapType="standard"
+          onRegionChangeComplete={(region) => setMapRegion(region)}
+          followsUserLocation={false}
+          zoomEnabled={true}
+          scrollEnabled={true}
+          pitchEnabled={true}
+          rotateEnabled={true}
+        >
+          {location && (
+            <Marker
+              coordinate={{
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+              }}
+              title="Your Current Location"
+              description={`Accurate to ±${location.coords.accuracy?.toFixed(0) || 'N/A'}m`}
+              pinColor="#6a1b9a"
+            />
+          )}
+        </MapView>
+      )}
 
       <TextInput
         mode="outlined"
-        label="Type something"
+        label="Type something to echo"
         value={input}
         onChangeText={setInput}
         style={styles.input}
+        multiline={false}
+        right={<TextInput.Icon icon="send" onPress={() => setEcho(input)} />}
       />
 
-      <Button mode="contained" onPress={() => setEcho(input)} style={styles.button}>
-        Echo
+      <Button 
+        mode="contained" 
+        onPress={() => setEcho(input)} 
+        style={styles.button}
+        disabled={!input.trim()}
+      >
+        Echo Message
       </Button>
 
       {echo ? (
         <Text variant="bodyLarge" style={styles.echoText}>
-          You wrote: {echo}
+          🔊 Echo: "{echo}"
         </Text>
       ) : null}
     </SafeAreaView>
@@ -82,49 +137,102 @@ function EchoForm({ locationEnabled, location }: EchoFormProps) {
 export default function App() {
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
+        setIsLoading(true);
+        
+        // First check if location services are enabled
+        let enabled = await Location.hasServicesEnabledAsync();
+        if (!enabled) {
+          Alert.alert(
+            'Location Services Disabled',
+            'Please enable location services in your device settings to use this app',
+            [{ text: 'OK' }]
+          );
+          setLocationEnabled(false);
+          setIsLoading(false);
+          return;
+        }
+
         // Request foreground location permission
         let { status } = await Location.requestForegroundPermissionsAsync();
         
         if (status !== 'granted') {
           Alert.alert(
             'Permission Denied',
-            'Precise location is required to use this app',
+            'Precise location access is required to use this app. Please grant location permission.',
             [{ text: 'OK' }]
           );
           setLocationEnabled(false);
+          setIsLoading(false);
           return;
         }
 
-        // Get precise location
+        // Get high accuracy location
         let locationData = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Highest,
+          accuracy: Location.Accuracy.BestForNavigation, // Highest accuracy
         });
 
         if (locationData) {
           setLocation(locationData);
           setLocationEnabled(true);
+          
+          // Optional: Set up location watching for real-time updates
+          // This will continuously update the location
+          Location.watchPositionAsync(
+            {
+              accuracy: Location.Accuracy.High,
+              timeInterval: 5000, // Update every 5 seconds
+              distanceInterval: 10, // Update when moved 10 meters
+            },
+            (newLocation) => {
+              setLocation(newLocation);
+            }
+          );
+          
         } else {
           Alert.alert(
             'Location Error',
-            'Unable to get precise location. Please ensure location services are enabled.',
+            'Unable to get your current location. Please check your GPS settings.',
             [{ text: 'OK' }]
           );
           setLocationEnabled(false);
         }
       } catch (error) {
+        console.error('Location error:', error);
+        let errorMessage = 'Unknown error';
+        if (error && typeof error === 'object' && 'message' in error) {
+          errorMessage = String((error as { message?: string }).message) || 'Unknown error';
+        }
         Alert.alert(
-          'Error',
-          'An error occurred while checking location services',
+          'Location Error',
+          `Failed to get location: ${errorMessage}`,
           [{ text: 'OK' }]
         );
         setLocationEnabled(false);
+      } finally {
+        setIsLoading(false);
       }
     })();
   }, []);
+
+  if (isLoading) {
+    return (
+      <PaperProvider theme={lightTheme}>
+        <SafeAreaView style={[styles.container, styles.centerContent]}>
+          <Text variant="headlineMedium" style={styles.loadingText}>
+            🌍 Getting your location...
+          </Text>
+          <Text variant="bodyMedium" style={styles.subText}>
+            Please ensure GPS is enabled
+          </Text>
+        </SafeAreaView>
+      </PaperProvider>
+    );
+  }
 
   return (
     <PaperProvider theme={lightTheme}>
@@ -133,38 +241,81 @@ export default function App() {
   );
 }
 
+const { width, height } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#ffffff', // Ensure white background
+    backgroundColor: '#ffffff',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   heading: {
     textAlign: 'center',
     marginBottom: 20,
     fontWeight: 'bold',
-    color: '#212121',
+    color: '#6a1b9a',
   },
   input: {
     marginBottom: 15,
+    backgroundColor: '#ffffff',
   },
   button: {
     marginTop: 5,
+    marginBottom: 15,
   },
   echoText: {
-    marginTop: 20,
+    marginTop: 15,
     textAlign: 'center',
     color: '#212121',
+    fontWeight: '500',
+    backgroundColor: '#f5f5f5',
+    padding: 10,
+    borderRadius: 8,
   },
   errorText: {
     textAlign: 'center',
-    color: '#ff0000',
+    color: '#d32f2f',
     marginTop: 10,
+    fontSize: 16,
   },
   locationText: {
     textAlign: 'center',
+    marginBottom: 8,
+    color: '#424242',
+    fontWeight: '500',
+  },
+  accuracyText: {
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#757575',
+    fontStyle: 'italic',
+  },
+  loadingText: {
+    textAlign: 'center',
+    color: '#6a1b9a',
     marginBottom: 10,
-    color: '#212121',
+  },
+  subText: {
+    textAlign: 'center',
+    color: '#757575',
+  },
+  map: {
+    width: width - 40, // Full width minus padding
+    height: Math.min(300, height * 0.4), // Responsive height, max 300px
+    marginBottom: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 3, // Android shadow
+    shadowColor: '#000', // iOS shadow
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });
