@@ -88,10 +88,10 @@ function EchoForm({ locationEnabled, location }: EchoFormProps) {
 
       {/* Display GPS Coordinates */}
       <Text variant="bodyMedium" style={styles.locationText}>
-        📍 Latitude: {location?.coords.latitude.toFixed(6) || 'Loading...'}
+        📍 Latitude: {location?.coords.latitude.toFixed(8) || 'Loading...'}
       </Text>
       <Text variant="bodyMedium" style={styles.locationText}>
-        📍 Longitude: {location?.coords.longitude.toFixed(6) || 'Loading...'}
+        📍 Longitude: {location?.coords.longitude.toFixed(8) || 'Loading...'}
       </Text>
       <Text variant="bodySmall" style={styles.accuracyText}>
         Accuracy: ±{location?.coords.accuracy?.toFixed(0) || 'N/A'}m
