@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "EchoApp",
-    "slug": "EchoApp",
+    "name": "Murang'a GPS",
+    "slug": "muranga-gps",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "echoapp",
+    "scheme": "murangagps",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -28,7 +28,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/image.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
@@ -41,10 +41,9 @@
     "permissions": {
       "location": {
         "foreground": {
-          "description": "This app requires precise location to function."
+          "description": "Murang'a GPS requires precise location access to provide accurate geocoordinates."
         }
       }
     }
   }
 }
-

@@ -49,7 +49,7 @@ function EchoForm({ locationEnabled, location }: EchoFormProps) {
           </head>
           <body>
             <iframe
-              src="https://www.google.com/maps/embed/v1/view?key=YOUR_API_KEY&center=${latitude},${longitude}&zoom=18&maptype=roadmap"
+              src="https://www.google.com/maps/embed/v1/view?key=AIzaSyDr2PTkF0jgpgwplATxHxdvTtuUEiaSB3Q&center=${latitude},${longitude}&zoom=18&maptype=roadmap"
               allowfullscreen>
             </iframe>
           </body>
@@ -71,7 +71,7 @@ function EchoForm({ locationEnabled, location }: EchoFormProps) {
     return (
       <SafeAreaView style={styles.container}>
         <Text variant="headlineLarge" style={styles.heading}>
-          Expo Echo App
+          Murang'a GPS APP
         </Text>
         <Text variant="bodyLarge" style={styles.errorText}>
           Please enable precise location to use this app
@@ -83,7 +83,7 @@ function EchoForm({ locationEnabled, location }: EchoFormProps) {
   return (
     <SafeAreaView style={styles.container}>
       <Text variant="headlineLarge" style={styles.heading}>
-        Expo Echo App
+        Murang'a GPS APP
       </Text>
 
       {/* Display GPS Coordinates */}
@@ -142,7 +142,7 @@ function EchoForm({ locationEnabled, location }: EchoFormProps) {
         style={styles.button}
         disabled={!input.trim()}
       >
-        Echo Message
+        Echo GPS Coordinates
       </Button>
 
       {echo ? (
