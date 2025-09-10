@@ -49,7 +49,7 @@ function EchoForm({ locationEnabled, location }: EchoFormProps) {
           </head>
           <body>
             <iframe
-              src="https://www.google.com/maps/embed/v1/view?key=AIzaSyDr2PTkF0jgpgwplATxHxdvTtuUEiaSB3Q&center=${latitude},${longitude}&zoom=18&maptype=roadmap"
+              src="https://www.google.com/maps/embed/v1/view?key=tttt&center=${latitude},${longitude}&zoom=18&maptype=roadmap"
               allowfullscreen>
             </iframe>
           </body>
