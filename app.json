@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.fmurimi.murangagps"
     },
     "web": {
       "bundler": "metro",
@@ -43,6 +44,12 @@
         "foreground": {
           "description": "Murang'a GPS requires precise location access to provide accurate geocoordinates."
         }
+      }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "82400419-c392-44f2-8893-fac3e6745dfa"
       }
     }
   }
